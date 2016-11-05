@@ -5,8 +5,9 @@ This is a plugin to enable the ui composition features of https://github.com/tar
 for the [https://caddyserver.com](caddyserver).
 
 Example Caddyfile
-`
+
+```
  uic / {
     fetch layout.html
  }
-`
+```
