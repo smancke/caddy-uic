@@ -7,7 +7,6 @@ import (
 	"github.com/tarent/lib-compose/composition"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 func init() {
@@ -15,7 +14,7 @@ func init() {
 		ServerType: "http",
 		Action:     setup,
 	})
-	httpserver.RegisterDevDirective("uic", "")
+	httpserver.RegisterDevDirective("uic", "proxy")
 }
 
 // setup configures a new Proxy middleware instance.
@@ -68,15 +67,7 @@ func parseConfig(c *caddy.Controller) ([]Fetch, error) {
 				url = "file://" + filepath.Join(httpserver.GetConfig(c).Root, url)
 			}
 		}
-		fetch := Fetch{
-			FetchDefinition: composition.FetchDefinition{
-				URL:             url,
-				Timeout:         time.Second * 10,
-				FollowRedirects: true,
-				Required:        true,
-				Method:          "GET",
-			},
-		}
+		fetch := Fetch{FetchDefinition: composition.NewFetchDefinition(url)}
 		fetchs = append(fetchs, fetch)
 	}
 

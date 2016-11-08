@@ -7,7 +7,8 @@ for the [https://caddyserver.com](caddyserver).
 Example Caddyfile
 
 ```
- uic / {
+ uic / http://upstream-host/ {
     fetch layout.html
+    fetch http://example.org/navigation
  }
 ```

@@ -11,8 +11,8 @@ import (
 )
 
 var headerDef = Fetch{
-	FetchDefinition: composition.FetchDefinition{
-		URL:             "file:///header.html",
+	FetchDefinition: &composition.FetchDefinition{
+		URL:             "http://example.com/header.html",
 		Timeout:         time.Second * 10,
 		FollowRedirects: true,
 		Required:        true,
@@ -21,7 +21,7 @@ var headerDef = Fetch{
 }
 
 var footerDef = Fetch{
-	FetchDefinition: composition.FetchDefinition{
+	FetchDefinition: &composition.FetchDefinition{
 		URL:             "file:///footer.html",
 		Timeout:         time.Second * 10,
 		FollowRedirects: true,
@@ -41,17 +41,17 @@ func TestSetup(t *testing.T) {
 	}{
 		{input: "uic", shouldErr: true},
 		{input: "uic / / xx", shouldErr: true},
-		{"uic / {\n  fetch /header.html\n  fetch /footer.html\n}",
+		{"uic / {\n  fetch http://example.com/header.html\n  fetch /footer.html\n}",
 			false,
 			"/",
 			"file://.",
 			[]Fetch{headerDef, footerDef}},
-		{"uic / {\n  fetch /header.html\n  fetch footer.html\n}", // footer as relative path to root
+		{"uic / {\n  fetch http://example.com/header.html\n  fetch footer.html\n}", // footer as relative path to root
 			false,
 			"/",
 			"file://.",
 			[]Fetch{headerDef, Fetch{
-				FetchDefinition: composition.FetchDefinition{
+				FetchDefinition: &composition.FetchDefinition{
 					URL:             "file://footer.html",
 					Timeout:         time.Second * 10,
 					FollowRedirects: true,
@@ -59,7 +59,7 @@ func TestSetup(t *testing.T) {
 					Method:          "GET",
 				},
 			}}},
-		{"uic /somePath http://example.com/ {\n  fetch /header.html\n  fetch /footer.html\n}",
+		{"uic /somePath http://example.com/ {\n  fetch http://example.com/header.html\n  fetch /footer.html\n}",
 			false,
 			"/somePath",
 			"http://example.com/",
@@ -76,7 +76,10 @@ func TestSetup(t *testing.T) {
 		middleware := mids[len(mids)-1](nil).(*Uic)
 		assert.Equal(t, test.path, middleware.path)
 		assert.Equal(t, test.upstream, middleware.upstream)
-		assert.Equal(t, test.expectedFetches, middleware.fetchRules)
+		assert.Equal(t, len(test.expectedFetches), len(middleware.fetchRules))
+		for i, f := range test.expectedFetches {
+			assert.Equal(t, test.expectedFetches[i], f)
+		}
 	}
 
 }

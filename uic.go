@@ -12,7 +12,7 @@ import (
 var globalCache = cache.NewCache("uic-cache", 1000, 1, time.Second*10)
 
 type Fetch struct {
-	composition.FetchDefinition
+	*composition.FetchDefinition
 }
 
 type Uic struct {
@@ -39,7 +39,7 @@ func (h *Uic) contentFetcherFactory(r *http.Request) composition.FetchResultSupp
 	fetcher.Loader = composition.NewCachingContentLoader(globalCache)
 
 	for _, f := range h.fetchRules {
-		fetcher.AddFetchJob(&f.FetchDefinition)
+		fetcher.AddFetchJob(f.FetchDefinition)
 	}
 
 	fetcher.AddFetchJob(composition.NewFetchDefinitionFromRequest(h.upstream, r))
