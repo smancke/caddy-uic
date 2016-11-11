@@ -20,31 +20,35 @@ func init() {
 // setup configures a new Proxy middleware instance.
 func setup(c *caddy.Controller) error {
 
-	// default upstream is the local file root
-	args := c.RemainingArgs()
-	if len(args) < 2 {
-		return fmt.Errorf("Missing path argument for uic directive (%v:%v)", c.File(), c.Line())
+	for c.Next() {
+		// default upstream is the local file root
+		args := c.RemainingArgs()
+
+		if len(args) < 1 {
+			return fmt.Errorf("Missing path argument for uic directive (%v:%v)", c.File(), c.Line())
+		}
+
+		var upstream string
+		if len(args) == 2 {
+			upstream = args[1]
+		} else {
+			upstream = "file://" + httpserver.GetConfig(c).Root
+		}
+
+		if len(args) > 2 {
+			return fmt.Errorf("To many arguments for uic directive %q (%v:%v)", args, c.File(), c.Line())
+		}
+
+		fetchRules, err := parseConfig(c)
+		if err != nil {
+			return err
+		}
+
+		httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
+			return NewUic(next, args[0], upstream, fetchRules)
+		})
 	}
 
-	var upstream string
-	if len(args) == 3 {
-		upstream = args[2]
-	} else {
-		upstream = "file://" + httpserver.GetConfig(c).Root
-	}
-
-	if len(args) > 3 {
-		return fmt.Errorf("To many arguments for uic directive %q (%v:%v)", args, c.File(), c.Line())
-	}
-
-	fetchRules, err := parseConfig(c)
-	if err != nil {
-		return err
-	}
-
-	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
-		return NewUic(next, args[1], upstream, fetchRules)
-	})
 	return nil
 }
 
