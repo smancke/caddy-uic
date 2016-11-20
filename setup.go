@@ -39,41 +39,47 @@ func setup(c *caddy.Controller) error {
 			return fmt.Errorf("To many arguments for uic directive %q (%v:%v)", args, c.File(), c.Line())
 		}
 
-		fetchRules, err := parseConfig(c)
+		fetchRules, except, err := parseConfig(c)
 		if err != nil {
 			return err
 		}
 
 		httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
-			return NewUic(next, args[0], upstream, fetchRules)
+			return NewUic(next, args[0], upstream, fetchRules, except)
 		})
 	}
 
 	return nil
 }
 
-func parseConfig(c *caddy.Controller) ([]Fetch, error) {
+func parseConfig(c *caddy.Controller) ([]Fetch, []string, error) {
 	var fetchs []Fetch
+	var except = []string{}
 
 	for c.NextBlock() {
-		if c.Val() != "fetch" {
-			return fetchs, fmt.Errorf("Unknown option within uic: %v (%v:%v)", c.Val(), c.File(), c.Line())
-		}
+		value := c.Val()
 		args := c.RemainingArgs()
-		if len(args) != 1 {
-			return fetchs, fmt.Errorf("Wrong number of arguments for fetch: %v (%v:%v)", args, c.File(), c.Line())
-		}
-		url := args[0]
-		if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-			if strings.HasPrefix(url, "/") {
-				url = "file://" + url
-			} else {
-				url = "file://" + filepath.Join(httpserver.GetConfig(c).Root, url)
+		switch value {
+		case "fetch":
+			if len(args) != 1 {
+				return fetchs, except, fmt.Errorf("Wrong number of arguments for fetch: %v (%v:%v)", args, c.File(), c.Line())
 			}
+			url := args[0]
+			if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
+				if strings.HasPrefix(url, "/") {
+					url = "file://" + url
+				} else {
+					url = "file://" + filepath.Join(httpserver.GetConfig(c).Root, url)
+				}
+			}
+			fetch := Fetch{FetchDefinition: composition.NewFetchDefinition(url)}
+			fetchs = append(fetchs, fetch)
+		case "except":
+			except = args
+		default:
+			return fetchs, except, fmt.Errorf("Unknown option within uic: %v (%v:%v)", c.Val(), c.File(), c.Line())
 		}
-		fetch := Fetch{FetchDefinition: composition.NewFetchDefinition(url)}
-		fetchs = append(fetchs, fetch)
 	}
 
-	return fetchs, nil
+	return fetchs, except, nil
 }

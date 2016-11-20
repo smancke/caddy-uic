@@ -38,6 +38,7 @@ func TestSetup(t *testing.T) {
 		path            string
 		upstream        string
 		expectedFetches []Fetch
+		expectedExcepts []string
 	}{
 		{input: "uic", shouldErr: true},
 		{input: "uic / / xx", shouldErr: true},
@@ -45,7 +46,16 @@ func TestSetup(t *testing.T) {
 			false,
 			"/",
 			"file://.",
-			[]Fetch{headerDef, footerDef}},
+			[]Fetch{headerDef, footerDef},
+			[]string{},
+		},
+		{"uic / {\n except /foo /bar \n}",
+			false,
+			"/",
+			"file://.",
+			[]Fetch{},
+			[]string{"/foo", "/bar"},
+		},
 		{"uic / {\n  fetch http://example.com/header.html\n  fetch footer.html\n}", // footer as relative path to root
 			false,
 			"/",
@@ -58,12 +68,16 @@ func TestSetup(t *testing.T) {
 					Required:        true,
 					Method:          "GET",
 				},
-			}}},
+			}},
+			[]string{},
+		},
 		{"uic /somePath http://example.com/ {\n  fetch http://example.com/header.html\n  fetch /footer.html\n}",
 			false,
 			"/somePath",
 			"http://example.com/",
-			[]Fetch{headerDef, footerDef}},
+			[]Fetch{headerDef, footerDef},
+			[]string{},
+		},
 	} {
 		c := caddy.NewTestController("http", test.input)
 		err := setup(c)
@@ -79,6 +93,7 @@ func TestSetup(t *testing.T) {
 		}
 		middleware := mids[len(mids)-1](nil).(*Uic)
 		assert.Equal(t, test.path, middleware.path)
+		assert.Equal(t, test.expectedExcepts, middleware.except)
 		assert.Equal(t, test.upstream, middleware.upstream)
 		assert.Equal(t, len(test.expectedFetches), len(middleware.fetchRules))
 		for i, f := range test.expectedFetches {
