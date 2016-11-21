@@ -8,28 +8,30 @@ import (
 	"time"
 )
 
-var globalCache = cache.NewCache("uic-cache", 1000, 1, time.Second*10)
+//var globalCache = cache.NewCache("uic-cache", 1000, 1, time.Second*10)
+var globalCache = cache.NewCache("uic-cache", 1, 1, time.Millisecond*1)
 
-type Fetch struct {
-	*composition.FetchDefinition
+var SecondaryFetchRequestHeaders = []string{
+	"Authorization",
+	"Cache-Control",
+	"Cookie",
+	"Pragma",
+	"Referer",
+	"X-Forwarded-Host",
+	"X-Correlation-Id",
+	"X-Feature-Toggle",
 }
 
 type Uic struct {
 	next               httpserver.Handler
-	path               string
-	upstream           string
-	fetchRules         []Fetch
-	except             []string
+	config             *Config
 	compositionHandler *composition.CompositionHandler
 }
 
-func NewUic(next httpserver.Handler, path string, upstream string, fetchRules []Fetch, except []string) *Uic {
+func NewUic(next httpserver.Handler, config *Config) *Uic {
 	h := &Uic{
-		next:       next,
-		path:       path,
-		upstream:   upstream,
-		fetchRules: fetchRules,
-		except:     except,
+		next:   next,
+		config: config,
 	}
 	h.compositionHandler = composition.NewCompositionHandler(h.contentFetcherFactory)
 	return h
@@ -39,11 +41,13 @@ func (h *Uic) contentFetcherFactory(r *http.Request) composition.FetchResultSupp
 	fetcher := composition.NewContentFetcher(nil)
 	fetcher.Loader = composition.NewCachingContentLoader(globalCache)
 
-	for _, f := range h.fetchRules {
-		fetcher.AddFetchJob(f.FetchDefinition)
+	for _, f := range h.config.FetchRules {
+		fd := composition.NewFetchDefinition(f.URL)
+		fd.Header = copyHeaders(r.Header, fd.Header, SecondaryFetchRequestHeaders)
+		fetcher.AddFetchJob(fd)
 	}
 
-	fetcher.AddFetchJob(composition.NewFetchDefinitionFromRequest(h.upstream, r))
+	fetcher.AddFetchJob(composition.NewFetchDefinitionFromRequest(h.config.Upstream, r))
 
 	return fetcher
 }
@@ -58,13 +62,29 @@ func (h *Uic) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
 }
 
 func (h *Uic) matches(requestPath string) bool {
-	if !httpserver.Path(requestPath).Matches(h.path) {
+	if !httpserver.Path(requestPath).Matches(h.config.Path) {
 		return false
 	}
-	for _, p := range h.except {
+	for _, p := range h.config.Except {
 		if httpserver.Path(requestPath).Matches(p) {
 			return false
 		}
 	}
 	return true
+}
+
+// copyHeaders copies only the header contained in the the whitelist
+// from src to dest. If dest is nil, it will be created.
+// The dest will also be returned.
+func copyHeaders(src, dest http.Header, whitelist []string) http.Header {
+	if dest == nil {
+		dest = http.Header{}
+	}
+	for _, k := range whitelist {
+		headerValues := src[k]
+		for _, v := range headerValues {
+			dest.Add(k, v)
+		}
+	}
+	return dest
 }

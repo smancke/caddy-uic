@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
-	"github.com/tarent/lib-compose/composition"
 	"path/filepath"
 	"strings"
 )
@@ -39,30 +38,29 @@ func setup(c *caddy.Controller) error {
 			return fmt.Errorf("To many arguments for uic directive %q (%v:%v)", args, c.File(), c.Line())
 		}
 
-		fetchRules, except, err := parseConfig(c)
+		config := NewConfig(args[0], upstream)
+
+		err := parseConfig(c, config)
 		if err != nil {
 			return err
 		}
 
 		httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
-			return NewUic(next, args[0], upstream, fetchRules, except)
+			return NewUic(next, config)
 		})
 	}
 
 	return nil
 }
 
-func parseConfig(c *caddy.Controller) ([]Fetch, []string, error) {
-	var fetchs []Fetch
-	var except = []string{}
-
+func parseConfig(c *caddy.Controller, config *Config) error {
 	for c.NextBlock() {
 		value := c.Val()
 		args := c.RemainingArgs()
 		switch value {
 		case "fetch":
 			if len(args) != 1 {
-				return fetchs, except, fmt.Errorf("Wrong number of arguments for fetch: %v (%v:%v)", args, c.File(), c.Line())
+				return fmt.Errorf("Wrong number of arguments for fetch: %v (%v:%v)", args, c.File(), c.Line())
 			}
 			url := args[0]
 			if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
@@ -72,14 +70,15 @@ func parseConfig(c *caddy.Controller) ([]Fetch, []string, error) {
 					url = "file://" + filepath.Join(httpserver.GetConfig(c).Root, url)
 				}
 			}
-			fetch := Fetch{FetchDefinition: composition.NewFetchDefinition(url)}
-			fetchs = append(fetchs, fetch)
+			config.AddFetch(&Fetch{
+				URL: url,
+			})
 		case "except":
-			except = args
+			config.Except = args
 		default:
-			return fetchs, except, fmt.Errorf("Unknown option within uic: %v (%v:%v)", c.Val(), c.File(), c.Line())
+			return fmt.Errorf("Unknown option within uic: %v (%v:%v)", c.Val(), c.File(), c.Line())
 		}
 	}
 
-	return fetchs, except, nil
+	return nil
 }

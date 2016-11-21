@@ -6,28 +6,14 @@ import (
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/stretchr/testify/assert"
-	"github.com/tarent/lib-compose/composition"
-	"time"
 )
 
 var headerDef = Fetch{
-	FetchDefinition: &composition.FetchDefinition{
-		URL:             "http://example.com/header.html",
-		Timeout:         time.Second * 10,
-		FollowRedirects: true,
-		Required:        true,
-		Method:          "GET",
-	},
+	URL: "http://example.com/header.html",
 }
 
 var footerDef = Fetch{
-	FetchDefinition: &composition.FetchDefinition{
-		URL:             "file:///footer.html",
-		Timeout:         time.Second * 10,
-		FollowRedirects: true,
-		Required:        true,
-		Method:          "GET",
-	},
+	URL: "file:///footer.html",
 }
 
 func TestSetup(t *testing.T) {
@@ -61,13 +47,7 @@ func TestSetup(t *testing.T) {
 			"/",
 			"file://.",
 			[]Fetch{headerDef, Fetch{
-				FetchDefinition: &composition.FetchDefinition{
-					URL:             "file://footer.html",
-					Timeout:         time.Second * 10,
-					FollowRedirects: true,
-					Required:        true,
-					Method:          "GET",
-				},
+				URL: "file://footer.html",
 			}},
 			[]string{},
 		},
@@ -92,10 +72,10 @@ func TestSetup(t *testing.T) {
 			continue
 		}
 		middleware := mids[len(mids)-1](nil).(*Uic)
-		assert.Equal(t, test.path, middleware.path)
-		assert.Equal(t, test.expectedExcepts, middleware.except)
-		assert.Equal(t, test.upstream, middleware.upstream)
-		assert.Equal(t, len(test.expectedFetches), len(middleware.fetchRules))
+		assert.Equal(t, test.path, middleware.config.Path)
+		assert.Equal(t, test.expectedExcepts, middleware.config.Except)
+		assert.Equal(t, test.upstream, middleware.config.Upstream)
+		assert.Equal(t, len(test.expectedFetches), len(middleware.config.FetchRules))
 		for i, f := range test.expectedFetches {
 			assert.Equal(t, test.expectedFetches[i], f)
 		}
@@ -122,6 +102,6 @@ func TestSetupMultipleMiddlewares(t *testing.T) {
 	middleware1 := mids[len(mids)-2](nil).(*Uic)
 	middleware2 := mids[len(mids)-1](nil).(*Uic)
 
-	assert.Equal(t, "/foo", middleware1.path)
-	assert.Equal(t, "/bar", middleware2.path)
+	assert.Equal(t, "/foo", middleware1.config.Path)
+	assert.Equal(t, "/bar", middleware2.config.Path)
 }
