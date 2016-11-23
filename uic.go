@@ -38,16 +38,21 @@ func NewUic(next httpserver.Handler, config *Config) *Uic {
 }
 
 func (h *Uic) contentFetcherFactory(r *http.Request) composition.FetchResultSupplier {
+	replacer := httpserver.NewReplacer(r, nil, "")
 	fetcher := composition.NewContentFetcher(nil)
 	fetcher.Loader = composition.NewCachingContentLoader(globalCache)
 
-	for _, f := range h.config.FetchRules {
-		fd := composition.NewFetchDefinition(f.URL)
+	for i, f := range h.config.FetchRules {
+		fd := composition.NewFetchDefinition(replacer.Replace(f.URL))
+		fd.Priority = i
+
 		fd.Header = copyHeaders(r.Header, fd.Header, SecondaryFetchRequestHeaders)
 		fetcher.AddFetchJob(fd)
 	}
 
-	fetcher.AddFetchJob(composition.NewFetchDefinitionFromRequest(h.config.Upstream, r))
+	mainFD := composition.NewFetchDefinitionFromRequest(replacer.Replace(h.config.Upstream), r)
+	mainFD.Priority = len(h.config.FetchRules)
+	fetcher.AddFetchJob(mainFD)
 
 	return fetcher
 }
