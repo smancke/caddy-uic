@@ -59,10 +59,16 @@ func parseConfig(c *caddy.Controller, config *Config) error {
 		args := c.RemainingArgs()
 		switch value {
 		case "fetch":
-			if len(args) != 1 {
-				return fmt.Errorf("Wrong number of arguments for fetch: %v (%v:%v)", args, c.File(), c.Line())
+			var url, name string
+			switch len(args) {
+			case 1:
+				url = args[0]
+			case 2:
+				name = args[0]
+				url = args[1]
+			default:
+				return c.ArgErr()
 			}
-			url := args[0]
 			if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
 				if strings.HasPrefix(url, "/") {
 					url = "file://" + url
@@ -70,13 +76,15 @@ func parseConfig(c *caddy.Controller, config *Config) error {
 					url = "file://" + filepath.Join(httpserver.GetConfig(c).Root, url)
 				}
 			}
-			config.AddFetch(&Fetch{
-				URL: url,
-			})
+			f := &Fetch{
+				URL:  url,
+				Name: name,
+			}
+			config.AddFetch(f)
 		case "except":
 			config.Except = args
 		default:
-			return fmt.Errorf("Unknown option within uic: %v (%v:%v)", c.Val(), c.File(), c.Line())
+			return c.Err("Unknown option within uic")
 		}
 	}
 

@@ -45,12 +45,13 @@ func (h *Uic) contentFetcherFactory(r *http.Request) composition.FetchResultSupp
 	for i, f := range h.config.FetchRules {
 		fd := composition.NewFetchDefinition(replacer.Replace(f.URL))
 		fd.Priority = i
-
+		fd.Name = f.Name
 		fd.Header = copyHeaders(r.Header, fd.Header, SecondaryFetchRequestHeaders)
 		fetcher.AddFetchJob(fd)
 	}
 
 	mainFD := composition.NewFetchDefinitionFromRequest(replacer.Replace(h.config.Upstream), r)
+	mainFD.Name = "main"
 	mainFD.Priority = len(h.config.FetchRules)
 	fetcher.AddFetchJob(mainFD)
 

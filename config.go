@@ -8,7 +8,8 @@ type Config struct {
 }
 
 type Fetch struct {
-	URL string
+	URL  string
+	Name string
 }
 
 func NewConfig(path, upstream string) *Config {

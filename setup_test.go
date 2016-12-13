@@ -8,55 +8,58 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var headerDef = Fetch{
+var headerDef = &Fetch{
 	URL: "http://example.com/header.html",
 }
 
-var footerDef = Fetch{
+var footerDef = &Fetch{
 	URL: "file:///footer.html",
 }
 
 func TestSetup(t *testing.T) {
 
 	for j, test := range []struct {
-		input           string
-		shouldErr       bool
-		path            string
-		upstream        string
-		expectedFetches []Fetch
-		expectedExcepts []string
+		input          string
+		shouldErr      bool
+		expectedConfig *Config
 	}{
 		{input: "uic", shouldErr: true},
 		{input: "uic / / xx", shouldErr: true},
 		{"uic / {\n  fetch http://example.com/header.html\n  fetch /footer.html\n}",
 			false,
-			"/",
-			"file://.",
-			[]Fetch{headerDef, footerDef},
-			[]string{},
+			&Config{
+				Path:       "/",
+				Upstream:   "file://.",
+				FetchRules: []*Fetch{headerDef, footerDef},
+				Except:     []string{},
+			},
 		},
 		{"uic / {\n except /foo /bar \n}",
 			false,
-			"/",
-			"file://.",
-			[]Fetch{},
-			[]string{"/foo", "/bar"},
+			&Config{
+				Path:       "/",
+				Upstream:   "file://.",
+				FetchRules: []*Fetch{},
+				Except:     []string{"/foo", "/bar"},
+			},
 		},
-		{"uic / {\n  fetch http://example.com/header.html\n  fetch footer.html\n}", // footer as relative path to root
+		{"uic / {\n  fetch http://example.com/header.html\n  fetch footer footer.html\n}", // footer as relative path to root
 			false,
-			"/",
-			"file://.",
-			[]Fetch{headerDef, Fetch{
-				URL: "file://footer.html",
-			}},
-			[]string{},
+			&Config{
+				Path:       "/",
+				Upstream:   "file://.",
+				FetchRules: []*Fetch{headerDef, &Fetch{URL: "file://footer.html", Name: "footer"}},
+				Except:     []string{},
+			},
 		},
 		{"uic /somePath http://example.com/ {\n  fetch http://example.com/header.html\n  fetch /footer.html\n}",
 			false,
-			"/somePath",
-			"http://example.com/",
-			[]Fetch{headerDef, footerDef},
-			[]string{},
+			&Config{
+				Path:       "/somePath",
+				Upstream:   "http://example.com/",
+				FetchRules: []*Fetch{headerDef, footerDef},
+				Except:     []string{},
+			},
 		},
 	} {
 		c := caddy.NewTestController("http", test.input)
@@ -72,13 +75,7 @@ func TestSetup(t *testing.T) {
 			continue
 		}
 		middleware := mids[len(mids)-1](nil).(*Uic)
-		assert.Equal(t, test.path, middleware.config.Path)
-		assert.Equal(t, test.expectedExcepts, middleware.config.Except)
-		assert.Equal(t, test.upstream, middleware.config.Upstream)
-		assert.Equal(t, len(test.expectedFetches), len(middleware.config.FetchRules))
-		for i, f := range test.expectedFetches {
-			assert.Equal(t, test.expectedFetches[i], f)
-		}
+		assert.Equal(t, test.expectedConfig, middleware.config)
 	}
 }
 
