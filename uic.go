@@ -50,7 +50,8 @@ func (h *Uic) contentFetcherFactory(r *http.Request) composition.FetchResultSupp
 		fetcher.AddFetchJob(fd)
 	}
 
-	mainFD := composition.NewFetchDefinitionFromRequest(replacer.Replace(h.config.Upstream), r)
+	mainFD := composition.NewFetchDefinition(replacer.Replace(h.config.Upstream))
+	mainFD = mainFD.FromRequest(r)
 	mainFD.Name = "main"
 	mainFD.Priority = len(h.config.FetchRules)
 	fetcher.AddFetchJob(mainFD)
