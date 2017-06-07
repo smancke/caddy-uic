@@ -1,5 +1,9 @@
 package uic
 
+import "time"
+
+const DefaultTimeout = 10000 * time.Millisecond
+
 type Config struct {
 	Path       string
 	Upstream   string
@@ -8,8 +12,9 @@ type Config struct {
 }
 
 type Fetch struct {
-	URL  string
-	Name string
+	URL     string
+	Name    string
+	Timeout time.Duration
 }
 
 func NewConfig(path, upstream string) *Config {

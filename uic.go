@@ -47,6 +47,7 @@ func (h *Uic) contentFetcherFactory(r *http.Request) composition.FetchResultSupp
 		fd.Priority = i
 		fd.Name = f.Name
 		fd.Header = copyHeaders(r.Header, fd.Header, SecondaryFetchRequestHeaders)
+		fd.Timeout = f.Timeout
 		fetcher.AddFetchJob(fd)
 	}
 
