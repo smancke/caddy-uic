@@ -6,6 +6,8 @@ import (
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"path/filepath"
 	"strings"
+	"strconv"
+	"time"
 )
 
 func init() {
@@ -60,12 +62,21 @@ func parseConfig(c *caddy.Controller, config *Config) error {
 		switch value {
 		case "fetch":
 			var url, name string
+			var timeoutInMillis int64 = 10000
+			var err error
 			switch len(args) {
 			case 1:
 				url = args[0]
 			case 2:
 				name = args[0]
 				url = args[1]
+			case 3:
+				name = args[0]
+				url = args[1]
+				timeoutInMillis, err = strconv.ParseInt(args[2], 10, 64)
+				if err != nil {
+					return c.Err(fmt.Sprintf("Error parsing timeout: %v", err.Error()))
+				}
 			default:
 				return c.ArgErr()
 			}
@@ -79,6 +90,7 @@ func parseConfig(c *caddy.Controller, config *Config) error {
 			f := &Fetch{
 				URL:  url,
 				Name: name,
+				Timeout: time.Duration(timeoutInMillis) * time.Millisecond,
 			}
 			config.AddFetch(f)
 		case "except":

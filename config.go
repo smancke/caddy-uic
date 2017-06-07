@@ -1,5 +1,7 @@
 package uic
 
+import "time"
+
 type Config struct {
 	Path       string
 	Upstream   string
@@ -8,8 +10,9 @@ type Config struct {
 }
 
 type Fetch struct {
-	URL  string
-	Name string
+	URL     string
+	Name    string
+	Timeout time.Duration
 }
 
 func NewConfig(path, upstream string) *Config {

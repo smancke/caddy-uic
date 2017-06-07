@@ -6,14 +6,17 @@ import (
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 var headerDef = &Fetch{
 	URL: "http://example.com/header.html",
+	Timeout: 10000 * time.Millisecond,
 }
 
 var footerDef = &Fetch{
 	URL: "file:///footer.html",
+	Timeout: 10000 * time.Millisecond,
 }
 
 func TestSetup(t *testing.T) {
@@ -48,7 +51,7 @@ func TestSetup(t *testing.T) {
 			&Config{
 				Path:       "/",
 				Upstream:   "file://.",
-				FetchRules: []*Fetch{headerDef, &Fetch{URL: "file://footer.html", Name: "footer"}},
+				FetchRules: []*Fetch{headerDef, &Fetch{URL: "file://footer.html", Name: "footer", Timeout: 10000 * time.Millisecond}},
 				Except:     []string{},
 			},
 		},
@@ -61,6 +64,16 @@ func TestSetup(t *testing.T) {
 				Except:     []string{},
 			},
 		},
+		{"uic /somePath http://example.com/ {\n  fetch header http://example.com/header.html 5000\n  fetch /footer.html\n}",
+			false,
+			&Config{
+				Path:       "/somePath",
+				Upstream:   "http://example.com/",
+				FetchRules: []*Fetch{{Name: "header", URL: "http://example.com/header.html", Timeout: 5000 * time.Millisecond}, footerDef},
+				Except:     []string{},
+			},
+		},
+		{input: "uic /somePath http://example.com/ {\n  fetch header http://example.com/header.html abc\n  fetch /footer.html\n}", shouldErr: true},
 	} {
 		c := caddy.NewTestController("http", test.input)
 		err := setup(c)
