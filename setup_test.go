@@ -11,12 +11,12 @@ import (
 
 var headerDef = &Fetch{
 	URL: "http://example.com/header.html",
-	Timeout: 10000 * time.Millisecond,
+	Timeout: 10 * time.Second,
 }
 
 var footerDef = &Fetch{
 	URL: "file:///footer.html",
-	Timeout: 10000 * time.Millisecond,
+	Timeout: 10 * time.Second,
 }
 
 func TestSetup(t *testing.T) {
@@ -51,7 +51,7 @@ func TestSetup(t *testing.T) {
 			&Config{
 				Path:       "/",
 				Upstream:   "file://.",
-				FetchRules: []*Fetch{headerDef, &Fetch{URL: "file://footer.html", Name: "footer", Timeout: 10000 * time.Millisecond}},
+				FetchRules: []*Fetch{headerDef, &Fetch{URL: "file://footer.html", Name: "footer", Timeout: 10 * time.Second}},
 				Except:     []string{},
 			},
 		},
@@ -64,7 +64,7 @@ func TestSetup(t *testing.T) {
 				Except:     []string{},
 			},
 		},
-		{"uic /somePath http://example.com/ {\n  fetch header http://example.com/header.html 5000\n  fetch /footer.html\n}",
+		{"uic /somePath http://example.com/ {\n  fetch header http://example.com/header.html 5000ms\n  fetch /footer.html\n}",
 			false,
 			&Config{
 				Path:       "/somePath",

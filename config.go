@@ -2,6 +2,8 @@ package uic
 
 import "time"
 
+const DefaultTimeout = 10000 * time.Millisecond
+
 type Config struct {
 	Path       string
 	Upstream   string

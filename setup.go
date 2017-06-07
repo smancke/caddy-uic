@@ -6,7 +6,6 @@ import (
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"path/filepath"
 	"strings"
-	"strconv"
 	"time"
 )
 
@@ -61,36 +60,33 @@ func parseConfig(c *caddy.Controller, config *Config) error {
 		args := c.RemainingArgs()
 		switch value {
 		case "fetch":
-			var url, name string
-			var timeoutInMillis int64 = 10000
-			var err error
+			f := &Fetch{
+				Timeout: DefaultTimeout,
+			}
+
 			switch len(args) {
 			case 1:
-				url = args[0]
+				f.URL = args[0]
 			case 2:
-				name = args[0]
-				url = args[1]
+				f.Name = args[0]
+				f.URL = args[1]
 			case 3:
-				name = args[0]
-				url = args[1]
-				timeoutInMillis, err = strconv.ParseInt(args[2], 10, 64)
+				var err error
+				f.Name = args[0]
+				f.URL = args[1]
+				f.Timeout, err = time.ParseDuration(args[2])
 				if err != nil {
 					return c.Err(fmt.Sprintf("Error parsing timeout: %v", err.Error()))
 				}
 			default:
 				return c.ArgErr()
 			}
-			if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-				if strings.HasPrefix(url, "/") {
-					url = "file://" + url
+			if !(strings.HasPrefix(f.URL, "http://") || strings.HasPrefix(f.URL, "https://")) {
+				if strings.HasPrefix(f.URL, "/") {
+					f.URL = "file://" + f.URL
 				} else {
-					url = "file://" + filepath.Join(httpserver.GetConfig(c).Root, url)
+					f.URL = "file://" + filepath.Join(httpserver.GetConfig(c).Root, f.URL)
 				}
-			}
-			f := &Fetch{
-				URL:  url,
-				Name: name,
-				Timeout: time.Duration(timeoutInMillis) * time.Millisecond,
 			}
 			config.AddFetch(f)
 		case "except":
