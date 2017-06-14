@@ -1,6 +1,7 @@
 package uic
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -59,9 +60,18 @@ func parseConfig(c *caddy.Controller, config *Config) error {
 		value := c.Val()
 		args := c.RemainingArgs()
 		switch value {
+		case "default_timeout":
+			if len(args) == 0 {
+				return c.Err(fmt.Sprintf("Error parsing default_timeout: %v", errors.New("Value not found")))
+			}
+			var err error
+			config.DefaultTimeout, err = time.ParseDuration(args[0])
+			if err != nil {
+				return c.Err(fmt.Sprintf("Error parsing default_timeout: %v", err.Error()))
+			}
 		case "fetch":
 			f := &Fetch{
-				Timeout: DefaultTimeout,
+				Timeout: config.DefaultTimeout,
 			}
 
 			switch len(args) {

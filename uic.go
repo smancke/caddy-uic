@@ -54,6 +54,7 @@ func (h *Uic) contentFetcherFactory(r *http.Request) composition.FetchResultSupp
 	mainFD := composition.NewFetchDefinition(replacer.Replace(h.config.Upstream))
 	mainFD = mainFD.FromRequest(r)
 	mainFD.Name = "main"
+	mainFD.Timeout = h.config.DefaultTimeout
 	mainFD.Priority = len(h.config.FetchRules)
 	fetcher.AddFetchJob(mainFD)
 
