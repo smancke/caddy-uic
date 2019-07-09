@@ -1,7 +1,7 @@
 package uic
 
 import (
-	"github.com/mholt/caddy/caddyhttp/httpserver"
+	"github.com/caddyserver/caddy/caddyhttp/httpserver"
 	"github.com/tarent/lib-compose/cache"
 	"github.com/tarent/lib-compose/composition"
 	"net/http"
